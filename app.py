@@ -1,20 +1,36 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash
+from forms import RegistrationForm
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Student, Faculty, Course, Attendance
 from datetime import datetime
 import pandas as pd
 import os
 
+# Create Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///attendance.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Import db and models
+from models import db, User, Student, Faculty, Course, Attendance
+
+# Initialize SQLAlchemy with app
 db.init_app(app)
+
+# Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# Create database tables
+def init_db():
+    with app.app_context():
+        db.create_all()
+        print("Database tables created successfully!")
+
+# Initialize database on startup
+init_db()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -109,37 +125,42 @@ def create_initial_faculty():
             
             # Create sample courses and attendance
             courses = [
-                {'name': 'IPDC', 'faculty': 'SJC'},
-                {'name': 'CEM', 'faculty': 'SJC'},
-                {'name': 'Python Programming', 'faculty': 'MJD'}
+                {"name": "IPDC", "code": "EC401", "faculty": "SJC"},
+                {"name": "DSP", "code": "EC402", "faculty": "MKP"},
+                {"name": "VLSI", "code": "EC403", "faculty": "LKP"},
+                {"name": "DC", "code": "EC404", "faculty": "RNP"},
+                {"name": "MC", "code": "EC405", "faculty": "MJD"}
             ]
             
             for course_data in courses:
                 print(f"Processing course: {course_data['name']}")
-                course = Course.query.filter_by(name=course_data['name']).first()
-                if not course:
-                    faculty = Faculty.query.join(User).filter(User.username == course_data['faculty']).first()
-                    print(f"Found faculty: {faculty.name if faculty else 'None'}")
-                    course = Course(name=course_data['name'], faculty_id=faculty.id if faculty else None)
-                    db.session.add(course)
-                    db.session.flush()
-                    print(f"Created course with ID: {course.id}")
-                    
-                    # Add sample attendance records
-                    from datetime import datetime, timedelta
-                    today = datetime.now()
-                    for i in range(10):  # Last 10 days
-                        date = today - timedelta(days=i)
-                        # Randomly mark present or absent (more present than absent)
-                        status = 'present' if i % 3 != 0 else 'absent'
-                        attendance = Attendance(
-                            student_id=student.id,
-                            course_id=course.id,
-                            date=date,
-                            status=status,
-                            marked_by=faculty.name if faculty else 'System'
-                        )
-                        db.session.add(attendance)
+                faculty = Faculty.query.join(User).filter(User.username == course_data["faculty"]).first()
+                print(f"Found faculty: {faculty.name}")
+                
+                course = Course(
+                    name=course_data["name"],
+                    code=course_data["code"],
+                    faculty_id=faculty.id
+                )
+                db.session.add(course)
+                db.session.flush()
+                print(f"Created course: {course.name}")
+                
+                # Add sample attendance records
+                from datetime import datetime, timedelta
+                today = datetime.now()
+                for i in range(10):  # Last 10 days
+                    date = today - timedelta(days=i)
+                    # Randomly mark present or absent (more present than absent)
+                    status = 'present' if i % 3 != 0 else 'absent'
+                    attendance = Attendance(
+                        student_id=student.id,
+                        course_id=course.id,
+                        date=date,
+                        status=status,
+                        marked_by=faculty.name if faculty else 'System'
+                    )
+                    db.session.add(attendance)
             
             db.session.commit()
             print("Successfully created student and attendance records")
@@ -152,10 +173,22 @@ def create_initial_faculty():
 
 @app.route('/')
 def index():
+    if current_user.is_authenticated:
+        if current_user.role == 'student':
+            return redirect(url_for('student_dashboard'))
+        elif current_user.role == 'admin':
+            return redirect(url_for('admin_dashboard'))
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        if current_user.role == 'student':
+            return redirect(url_for('student_dashboard'))
+        elif current_user.role == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        return redirect(url_for('index'))
+    
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -163,17 +196,18 @@ def login():
         
         if user and user.check_password(password):  
             login_user(user)
-            if user.role == 'admin':
-                return redirect(url_for('admin_dashboard'))
-            elif user.role == 'faculty':
-                return redirect(url_for('faculty_dashboard'))
-            elif user.role == 'student':
+            flash('Logged in successfully!', 'success')
+            
+            if user.role == 'student':
                 return redirect(url_for('student_dashboard'))
-            else:
-                return redirect(url_for('parent_dashboard'))
-        
-        flash('Invalid username or password')
+            elif user.role == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('index'))
+            
+        flash('Invalid username or password', 'danger')
+    
     return render_template('login.html')
+
 
 @app.route('/admin')
 @login_required
@@ -751,11 +785,15 @@ def admin_courses():
     
     return render_template('admin/courses.html', ec_students=ec_students, ict_students=ict_students)
 
+
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
+    flash('Logged out successfully.', 'success')
     return redirect(url_for('index'))
+
 
 # Student Registration and Dashboard Routes
 @app.route('/student/register', methods=['GET', 'POST'])
@@ -801,4 +839,46 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         create_initial_faculty()  
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        # Check if username already exists
+        if User.query.filter_by(username=form.username.data).first():
+            flash('Username already exists. Please choose a different one.', 'danger')
+            return render_template('register.html', form=form)
+        
+        # Create new user
+        hashed_password = generate_password_hash(form.password.data)
+        user = User(username=form.username.data,
+                   email=form.email.data,
+                   password=hashed_password,
+                   role=form.role.data)
+        
+        try:
+            db.session.add(user)
+            db.session.commit()
+            
+            # Create student profile if role is student
+            if form.role.data == 'student':
+                student = Student(user_id=user.id,
+                                name=form.username.data,
+                                email=form.email.data)
+                db.session.add(student)
+                db.session.commit()
+            
+            flash('Registration successful! Please login.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            flash('An error occurred during registration. Please try again.', 'danger')
+            print(f'Registration error: {str(e)}')
+    
+    return render_template('register.html', form=form)
+
+if __name__ == '__main__':
     app.run(debug=True)
