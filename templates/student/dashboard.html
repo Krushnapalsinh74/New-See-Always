@@ -1,135 +1,475 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-            <div class="position-sticky pt-3">
-                <div class="user-profile text-center mb-4">
-                    <h5>{{ student.name }}</h5>
-                    <p class="text-muted">Roll No: {{ student.roll_number }}</p>
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="student-profile">
+            <div class="profile-image">
+                <i class="bi bi-person-circle"></i>
+            </div>
+            <h3>{{ student.name }}</h3>
+            <p class="roll-number">Roll No: {{ student.roll_number }}</p>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>Overview</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="bi bi-calendar2-check"></i>
+                <span>Attendance</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="bi bi-person"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="content-header">
+            <h1>Dashboard</h1>
+            <div class="header-actions">
+                <button class="theme-toggle">
+                    <i class="bi bi-moon-stars"></i>
+                </button>
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    <i class="bi bi-box-arrow-right"></i>
+                    Logout
+                </a>
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="card-icon">
+                    <i class="bi bi-mortarboard-fill"></i>
                 </div>
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#overview">
-                            <i class="bi bi-house-door"></i> Overview
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#attendance">
-                            <i class="bi bi-calendar-check"></i> Attendance
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#profile">
-                            <i class="bi bi-person"></i> Profile
-                        </a>
-                    </li>
-                </ul>
+                <div class="card-info">
+                    <h3>{{ courses|length }}</h3>
+                    <p>Total Courses</p>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="card-icon">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+                <div class="card-info">
+                    {% set total_attendance = namespace(sum=0, count=0) %}
+                    {% for course in courses %}
+                        {% set stats = attendance_stats[course.id] %}
+                        {% set total_attendance.sum = total_attendance.sum + stats.percentage %}
+                        {% set total_attendance.count = total_attendance.count + 1 %}
+                    {% endfor %}
+                    <h3>{{ "%.1f"|format(total_attendance.sum / total_attendance.count) }}%</h3>
+                    <p>Average Attendance</p>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="card-icon">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div class="card-info">
+                    <h3>{{ courses|length * 5 }}</h3>
+                    <p>Total Classes/Week</p>
+                </div>
             </div>
         </div>
 
-        <!-- Main content -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1>Dashboard</h1>
-                <div class="btn-toolbar mb-2 mb-md-0">
-                    <div class="btn-group me-2">
-                        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">
-                            <i class="bi bi-box-arrow-right"></i> Logout
-                        </a>
+        <!-- Course Grid -->
+        <div class="course-grid">
+            {% for course in courses %}
+            {% set stats = attendance_stats[course.id] %}
+            <div class="course-card">
+                <div class="course-header">
+                    <div class="course-info">
+                        <h3>{{ stats.name }}</h3>
+                        <span class="course-code">{{ stats.code }}</span>
+                    </div>
+                    <div class="attendance-percentage {% if stats.percentage >= 75 %}high{% elif stats.percentage >= 60 %}medium{% else %}low{% endif %}">
+                        {{ stats.percentage }}%
                     </div>
                 </div>
-            </div>
-
-            <!-- Course Overview -->
-            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
-                {% for course in courses %}
-                <div class="col">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ attendance_stats[course.id].name }}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">{{ attendance_stats[course.id].code }}</h6>
-                            
-                            <div class="attendance-progress mt-3">
-                                <div class="progress" style="height: 10px;">
-                                    <div class="progress-bar {% if attendance_stats[course.id].percentage >= 75 %}bg-success{% elif attendance_stats[course.id].percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
-                                         role="progressbar"
-                                         style="width: {{ attendance_stats[course.id].percentage }}%"
-                                         aria-valuenow="{{ attendance_stats[course.id].percentage }}"
-                                         aria-valuemin="0"
-                                         aria-valuemax="100">
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-between mt-2">
-                                    <small>Attendance: {{ attendance_stats[course.id].percentage }}%</small>
-                                    <small>Present: {{ attendance_stats[course.id].present }}/{{ attendance_stats[course.id].total }}</small>
-                                </div>
-                            </div>
-                        </div>
+                <div class="attendance-bar">
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: {{ stats.percentage }}%"></div>
+                    </div>
+                    <div class="attendance-stats">
+                        <span>Present: {{ stats.present }}/{{ stats.total }}</span>
+                        <span>Required: 75%</span>
                     </div>
                 </div>
-                {% endfor %}
+                <div class="course-footer">
+                    <span class="status-badge {% if stats.percentage >= 75 %}success{% elif stats.percentage >= 60 %}warning{% else %}danger{% endif %}">
+                        {% if stats.percentage >= 75 %}
+                            On Track
+                        {% elif stats.percentage >= 60 %}
+                            Need Attention
+                        {% else %}
+                            Critical
+                        {% endif %}
+                    </span>
+                    <button class="details-btn">View Details</button>
+                </div>
             </div>
-        </main>
-    </div>
+            {% endfor %}
+        </div>
+    </main>
 </div>
 {% endblock %}
 
 {% block styles %}
 <style>
+:root {
+    --primary-color: #4361ee;
+    --secondary-color: #3f37c9;
+    --success-color: #4caf50;
+    --warning-color: #ff9800;
+    --danger-color: #f44336;
+    --text-primary: #2b2d42;
+    --text-secondary: #8d99ae;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8f9fa;
+    --sidebar-width: 250px;
+}
+
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: var(--bg-secondary);
+}
+
+/* Sidebar Styles */
 .sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-primary);
+    border-right: 1px solid rgba(0,0,0,0.1);
+    padding: 2rem 1rem;
     position: fixed;
-    top: 0;
-    bottom: 0;
+    height: 100vh;
     left: 0;
-    z-index: 100;
-    padding: 48px 0 0;
-    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    top: 0;
 }
 
-.nav-link {
-    color: #333;
-    padding: .5rem 1rem;
+.student-profile {
+    text-align: center;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
-.nav-link.active {
-    color: #007bff;
-    background-color: rgba(0, 123, 255, .1);
+.profile-image {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1rem;
+    background-color: var(--bg-secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.nav-link:hover {
-    color: #007bff;
+.profile-image i {
+    font-size: 2.5rem;
+    color: var(--text-secondary);
 }
 
-.card {
+.student-profile h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.2rem;
+}
+
+.roll-number {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.sidebar-nav {
+    margin-top: 2rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.nav-item i {
+    margin-right: 1rem;
+    font-size: 1.2rem;
+}
+
+.nav-item.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.nav-item:hover:not(.active) {
+    background-color: var(--bg-secondary);
+}
+
+/* Main Content Styles */
+.main-content {
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    padding: 2rem;
+}
+
+.content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.theme-toggle, .logout-btn {
+    padding: 0.5rem 1rem;
     border: none;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    transition: transform 0.2s;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
 }
 
-.card:hover {
-    transform: translateY(-5px);
+.theme-toggle {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
 }
 
-.progress {
-    background-color: #e9ecef;
+.logout-btn {
+    background-color: var(--danger-color);
+    color: white;
+    text-decoration: none;
 }
 
-main {
-    padding-top: 48px;
+/* Summary Cards */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
 }
 
-@media (max-width: 767.98px) {
+.summary-card {
+    background-color: var(--bg-primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.card-info h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+.card-info p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* Course Grid */
+.course-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.course-card {
+    background-color: var(--bg-primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.course-info h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+}
+
+.course-code {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.attendance-percentage {
+    font-size: 1.5rem;
+    font-weight: bold;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+}
+
+.attendance-percentage.high { color: var(--success-color); }
+.attendance-percentage.medium { color: var(--warning-color); }
+.attendance-percentage.low { color: var(--danger-color); }
+
+.attendance-bar {
+    margin-bottom: 1.5rem;
+}
+
+.progress-track {
+    height: 8px;
+    background-color: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.attendance-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.course-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge.success {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: var(--success-color);
+}
+
+.status-badge.warning {
+    background-color: rgba(255, 152, 0, 0.1);
+    color: var(--warning-color);
+}
+
+.status-badge.danger {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--danger-color);
+}
+
+.details-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--primary-color);
+    background: none;
+    color: var(--primary-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.details-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+@media (max-width: 768px) {
     .sidebar {
-        position: static;
-        padding-top: 0;
+        transform: translateX(-100%);
+        z-index: 1000;
+        transition: transform 0.3s ease;
     }
     
-    main {
-        padding-top: 0;
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .summary-cards {
+        grid-template-columns: 1fr;
     }
 }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme toggle functionality
+    const themeToggle = document.querySelector('.theme-toggle');
+    const root = document.documentElement;
+    
+    themeToggle.addEventListener('click', function() {
+        if (root.style.getPropertyValue('--bg-primary') === '#1a1a1a') {
+            // Switch to light theme
+            root.style.setProperty('--bg-primary', '#ffffff');
+            root.style.setProperty('--bg-secondary', '#f8f9fa');
+            root.style.setProperty('--text-primary', '#2b2d42');
+            root.style.setProperty('--text-secondary', '#8d99ae');
+            themeToggle.innerHTML = '<i class="bi bi-moon-stars"></i>';
+        } else {
+            // Switch to dark theme
+            root.style.setProperty('--bg-primary', '#1a1a1a');
+            root.style.setProperty('--bg-secondary', '#2d2d2d');
+            root.style.setProperty('--text-primary', '#ffffff');
+            root.style.setProperty('--text-secondary', '#a0a0a0');
+            themeToggle.innerHTML = '<i class="bi bi-sun"></i>';
+        }
+    });
+    
+    // Mobile sidebar toggle
+    const menuToggle = document.createElement('button');
+    menuToggle.className = 'menu-toggle';
+    menuToggle.innerHTML = '<i class="bi bi-list"></i>';
+    document.querySelector('.content-header').prepend(menuToggle);
+    
+    menuToggle.addEventListener('click', function() {
+        document.querySelector('.sidebar').classList.toggle('active');
+    });
+});
+</script>
 {% endblock %}
