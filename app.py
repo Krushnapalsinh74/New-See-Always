@@ -315,46 +315,79 @@ def get_faculty_timetable(date):
 @login_required
 def faculty_dashboard():
     if current_user.role != 'faculty':
-        flash('Access denied. Faculty privileges required.', 'error')
-        return redirect(url_for('index'))
-    
+        flash('Access denied!', 'error')
+        return redirect(url_for('login'))
+
+    # Get faculty details
     faculty = Faculty.query.filter_by(user_id=current_user.id).first()
+    
     if not faculty:
-        flash('Faculty profile not found.', 'error')
-        return redirect(url_for('index'))
+        flash('Faculty profile not found. Please contact administrator.', 'error')
+        return redirect(url_for('login'))
+
+    # Get courses taught by faculty
+    courses = Course.query.filter_by(faculty_id=faculty.id).all()
     
-    # Get students based on faculty's department
-    students = []
-    if faculty.department == 'EC':
-        students = [
-            {"enrollment": "236260311001", "name": "CHAUDHARI RAVINDRABHAI MADRUPBHAI"},
-            {"enrollment": "236260311002", "name": "DAVE FALGUNI JITENDRAKUMAR"},
-            {"enrollment": "236260311003", "name": "MALI PARESHBHAI RAMESHBHAI"},
-            {"enrollment": "236260311004", "name": "PATEL PRIYALBEN JAYPRAKASH"},
-            {"enrollment": "236260311006", "name": "PRAJAPATI PRINCEKUMAR DILIPBHAI"},
-            {"enrollment": "236260311007", "name": "PRAJAPATI SHAILESHBHAI CHELABHAI"},
-            {"enrollment": "236268311001", "name": "SHRIMALI HITENKUMAR VASANTBHAI"}
-        ]
-    else:
-        students = [
-            {"enrollment": "236260332001", "name": "ACHARYA MILAP MUKESHBHAI"},
-            {"enrollment": "236260332004", "name": "BHAVSAR PRACHI SNEHALKUMAR"},
-            {"enrollment": "236260332006", "name": "CHANDARANA HARSHKUMAR CHANDRAKANTBHAI"}
-        ]
+    # Calculate statistics for each course
+    course_stats = {}
+    total_students = 0
+    total_attendance = 0
+    total_classes = 0
     
-    # Get today's timetable for the faculty
-    today = datetime.now()
-    day = today.strftime('%A').upper()
-    timetable = []
-    if current_user.username in FACULTY_TIMETABLES:
-        timetable = [slot for slot in FACULTY_TIMETABLES[current_user.username] if slot['Day'] == day]
-        timetable.sort(key=lambda x: x['Time'])
-    
-    return render_template('faculty/dashboard.html', 
-                         faculty=faculty,
-                         students=students,
-                         timetable=timetable,
-                         today=today.strftime('%Y-%m-%d'))
+    for course in courses:
+        # Get all students who have attendance records in this course
+        student_records = db.session.query(Student).join(
+            Attendance, Attendance.student_id == Student.id
+        ).filter(
+            Attendance.course_id == course.id
+        ).distinct().all()
+        
+        # Get attendance records for this course
+        attendance_records = Attendance.query.filter_by(course_id=course.id).all()
+        
+        num_students = len(student_records)
+        num_classes = len(set(record.date for record in attendance_records))
+        
+        if num_students > 0 and num_classes > 0:
+            present_count = sum(1 for record in attendance_records if record.status == 'present')
+            total_possible = num_students * num_classes
+            attendance_percentage = (present_count / total_possible * 100) if total_possible > 0 else 0
+        else:
+            present_count = 0
+            attendance_percentage = 0
+            
+        course_stats[course.id] = {
+            'name': course.name,
+            'code': course.code,
+            'num_students': num_students,
+            'num_classes': num_classes,
+            'attendance_percentage': round(attendance_percentage, 1),
+            'present_count': present_count,
+            'low_attendance_students': sum(1 for student in student_records if 
+                (sum(1 for a in student.attendance_records if a.course_id == course.id and a.status == 'present') /
+                 sum(1 for a in student.attendance_records if a.course_id == course.id) * 100 if 
+                 sum(1 for a in student.attendance_records if a.course_id == course.id) > 0 else 0) < 75)
+        }
+        
+        total_students += num_students
+        total_attendance += present_count
+        total_classes += num_classes
+
+    # Calculate overall statistics
+    overall_stats = {
+        'total_courses': len(courses),
+        'total_students': total_students,
+        'total_classes': total_classes,
+        'average_attendance': round(total_attendance / (total_students * total_classes) * 100, 1) if total_students * total_classes > 0 else 0
+    }
+
+    return render_template(
+        'faculty/dashboard.html',
+        faculty=faculty,
+        courses=courses,
+        course_stats=course_stats,
+        overall_stats=overall_stats
+    )
 
 @app.route('/student/dashboard')
 @login_required
@@ -369,7 +402,7 @@ def student_dashboard():
     if not student:
         flash('Student profile not found. Please contact administrator.', 'error')
         return redirect(url_for('login'))
-    
+
     # Get courses and attendance records
     courses = Course.query.all()
     attendance_stats = {}
