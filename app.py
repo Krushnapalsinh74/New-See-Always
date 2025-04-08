@@ -327,19 +327,19 @@ def faculty_dashboard():
     students = []
     if faculty.department == 'EC':
         students = [
-            {"enrollment": "236260311001", "name": "CHAUDHARI RAVINDRABHAI MADRUPBHAI"},
-            {"enrollment": "236260311002", "name": "DAVE FALGUNI JITENDRAKUMAR"},
-            {"enrollment": "236260311003", "name": "MALI PARESHBHAI RAMESHBHAI"},
-            {"enrollment": "236260311004", "name": "PATEL PRIYALBEN JAYPRAKASH"},
-            {"enrollment": "236260311006", "name": "PRAJAPATI PRINCEKUMAR DILIPBHAI"},
-            {"enrollment": "236260311007", "name": "PRAJAPATI SHAILESHBHAI CHELABHAI"},
-            {"enrollment": "236268311001", "name": "SHRIMALI HITENKUMAR VASANTBHAI"}
+            {"enrollment": "236260311001", "name": "CHAUDHARI RAVINDRABHAI MADRUPBHAI", "attendance": 85, "performance": 78},
+            {"enrollment": "236260311002", "name": "DAVE FALGUNI JITENDRAKUMAR", "attendance": 92, "performance": 88},
+            {"enrollment": "236260311003", "name": "MALI PARESHBHAI RAMESHBHAI", "attendance": 78, "performance": 72},
+            {"enrollment": "236260311004", "name": "PATEL PRIYALBEN JAYPRAKASH", "attendance": 95, "performance": 90},
+            {"enrollment": "236260311006", "name": "PRAJAPATI PRINCEKUMAR DILIPBHAI", "attendance": 88, "performance": 85},
+            {"enrollment": "236260311007", "name": "PRAJAPATI SHAILESHBHAI CHELABHAI", "attendance": 82, "performance": 76},
+            {"enrollment": "236268311001", "name": "SHRIMALI HITENKUMAR VASANTBHAI", "attendance": 90, "performance": 82}
         ]
     else:
         students = [
-            {"enrollment": "236260332001", "name": "ACHARYA MILAP MUKESHBHAI"},
-            {"enrollment": "236260332004", "name": "BHAVSAR PRACHI SNEHALKUMAR"},
-            {"enrollment": "236260332006", "name": "CHANDARANA HARSHKUMAR CHANDRAKANTBHAI"}
+            {"enrollment": "236260332001", "name": "ACHARYA MILAP MUKESHBHAI", "attendance": 88, "performance": 85},
+            {"enrollment": "236260332004", "name": "BHAVSAR PRACHI SNEHALKUMAR", "attendance": 94, "performance": 92},
+            {"enrollment": "236260332006", "name": "CHANDARANA HARSHKUMAR CHANDRAKANTBHAI", "attendance": 86, "performance": 80}
         ]
     
     # Get today's timetable for the faculty
@@ -349,12 +349,103 @@ def faculty_dashboard():
     if current_user.username in FACULTY_TIMETABLES:
         timetable = [slot for slot in FACULTY_TIMETABLES[current_user.username] if slot['Day'] == day]
         timetable.sort(key=lambda x: x['Time'])
+        
+        # Add additional info to timetable entries
+        for slot in timetable:
+            slot['status'] = 'active' if datetime.now().hour >= 10 and datetime.now().hour < 11 else 'pending'
+            slot['room'] = 'Room 301'
+            slot['students'] = 45
+            slot['total_students'] = 50
+            slot['attendance_marked'] = True if datetime.now().hour >= 11 else False
+            slot['online_session'] = False
+    
+    # Calculate stats
+    total_hours = len(timetable)
+    total_students = len(students)
+    courses = len(set(slot['Subject'].split('(')[0] for slot in FACULTY_TIMETABLES.get(current_user.username, [])))
+    pending_tasks = 3
+    
+    # Weekly stats
+    weekly_stats = {
+        'attendance': [85, 88, 92, 86, 90],  # Last 5 days attendance percentage
+        'performance': [82, 85, 88, 84, 86],  # Last 5 days average performance
+        'days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+    }
+    
+    # Course materials
+    course_materials = [
+        {'name': 'Data Structures Notes', 'type': 'pdf', 'size': '2.5 MB', 'uploaded': '2 days ago', 'downloads': 45},
+        {'name': 'Algorithm Analysis', 'type': 'ppt', 'size': '1.8 MB', 'uploaded': '1 week ago', 'downloads': 38},
+        {'name': 'Practice Problems', 'type': 'pdf', 'size': '1.2 MB', 'uploaded': '3 days ago', 'downloads': 42},
+        {'name': 'Assignment Solutions', 'type': 'pdf', 'size': '900 KB', 'uploaded': '1 day ago', 'downloads': 25}
+    ]
+    
+    # Upcoming events
+    upcoming_events = [
+        {'title': 'Mid-term Exam', 'date': datetime.strptime('2025-04-15', '%Y-%m-%d'), 'type': 'exam', 'description': 'Data Structures Mid-term Examination'},
+        {'title': 'Department Meeting', 'date': datetime.strptime('2025-04-10', '%Y-%m-%d'), 'type': 'meeting', 'description': 'Faculty coordination meeting'},
+        {'title': 'Project Submissions', 'date': datetime.strptime('2025-04-20', '%Y-%m-%d'), 'type': 'deadline', 'description': 'Student project deadline'},
+        {'title': 'Guest Lecture', 'date': datetime.strptime('2025-04-12', '%Y-%m-%d'), 'type': 'event', 'description': 'Industry expert session'}
+    ]
+    
+    # Sample notifications with priority and actions
+    notifications = [
+        {
+            "message": "Attendance pending for Data Structures class",
+            "time": "5 minutes ago",
+            "type": "warning",
+            "priority": "high",
+            "action": "Mark Now",
+            "action_url": url_for('mark_attendance')
+        },
+        {
+            "message": "New assignment submissions from CSE-A",
+            "time": "10 minutes ago",
+            "type": "info",
+            "priority": "medium",
+            "action": "Review",
+            "action_url": "#review-submissions"
+        },
+        {
+            "message": "Department meeting at 2:00 PM",
+            "time": "1 hour ago",
+            "type": "primary",
+            "priority": "high",
+            "action": "Join",
+            "action_url": "#join-meeting"
+        },
+        {
+            "message": "Student query on Assignment 3",
+            "time": "2 hours ago",
+            "type": "info",
+            "priority": "low",
+            "action": "Respond",
+            "action_url": "#student-queries"
+        }
+    ]
+    
+    # Enhanced performance metrics with trends
+    performance_metrics = {
+        'attendance_rate': {'value': 88, 'trend': 'up', 'change': '+2.5%'},
+        'assignment_completion': {'value': 92, 'trend': 'up', 'change': '+4.8%'},
+        'average_score': {'value': 85, 'trend': 'stable', 'change': '0%'},
+        'participation': {'value': 78, 'trend': 'down', 'change': '-1.2%'}
+    }
     
     return render_template('faculty/dashboard.html', 
                          faculty=faculty,
                          students=students,
                          timetable=timetable,
-                         today=today.strftime('%Y-%m-%d'))
+                         today=today.strftime('%Y-%m-%d'),
+                         total_hours=total_hours,
+                         total_students=total_students,
+                         courses=courses,
+                         pending_tasks=pending_tasks,
+                         notifications=notifications,
+                         weekly_stats=weekly_stats,
+                         course_materials=course_materials,
+                         upcoming_events=upcoming_events,
+                         performance_metrics=performance_metrics)
 
 @app.route('/student/dashboard')
 @login_required
