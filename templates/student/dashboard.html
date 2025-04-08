@@ -1,643 +1,135 @@
 {% extends "base.html" %}
+
 {% block content %}
-
-<div class="header">
-    <div class="logo">📚 Attendance System</div>
-    <div class="user-info">
-        <span>{{ student.roll_number }}</span>
-        <a href="{{ url_for('logout') }}" class="logout">Logout</a>
-    </div>
-    <button class="theme-toggle">🌙</button>
-</div>
-
-<div class="container">
-    <div class="welcome-header">
-        <h1>Welcome, {{ student.name }}</h1>
-        <div class="student-info">
-            <p><strong>Roll Number:</strong> {{ student.roll_number }}</p>
-            <p><strong>Course:</strong> {{ student.course }}</p>
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3">
+                <div class="user-profile text-center mb-4">
+                    <h5>{{ student.name }}</h5>
+                    <p class="text-muted">Roll No: {{ student.roll_number }}</p>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#overview">
+                            <i class="bi bi-house-door"></i> Overview
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#attendance">
+                            <i class="bi bi-calendar-check"></i> Attendance
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#profile">
+                            <i class="bi bi-person"></i> Profile
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </div>
-    
-    <div class="tabs">
-        <button class="tab active" data-tab="overview">Overview</button>
-        <button class="tab" data-tab="attendance-history">Attendance History</button>
-        <button class="tab" data-tab="profile">Profile</button>
-        <button class="tab" data-tab="timetable">Timetable</button>
-        <button class="tab" data-tab="notifications">Notifications</button>
-    </div>
 
-    <div class="tab-content active" id="overview">
-        <div class="dashboard-grid">
-            <!-- Quick Stats -->
-            <div class="card">
-                <h3>Quick Stats</h3>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span>Overall Attendance</span>
-                        <h2>{{ "%.1f"|format(attendance_stats.values()|map(attribute='percentage')|list|sum / attendance_stats|length) }}%</h2>
-                    </div>
-                    <div class="stat-item">
-                        <span>Total Classes</span>
-                        <h2>{{ attendance_stats.values()|map(attribute='total')|list|sum }}</h2>
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1>Dashboard</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Course-wise Attendance -->
-            {% for course_name, stats in attendance_stats.items() %}
-            <div class="card stats-card">
-                <h3>{{ course_name }}</h3>
-                <div class="grade grade-{{ stats.grade }}">Grade {{ stats.grade }}</div>
-                <div class="progress-bar">
-                    <div class="progress" style="width: {{ stats.percentage }}%"></div>
-                </div>
-                <div class="attendance-info">
-                    <span>{{ stats.present }} Present</span>
-                    <span>{{ stats.total }} Total</span>
-                    <span>{{ stats.percentage }}%</span>
-                </div>
-            </div>
-            {% endfor %}
-
-            <!-- Quick Actions -->
-            <div class="card">
-                <h3>Quick Actions</h3>
-                <div class="quick-actions">
-                    <a href="#" class="action-btn" onclick="viewTimetable()">View Today's Classes</a>
-                    <a href="#" class="action-btn" onclick="downloadReport()">Download Report</a>
-                    <a href="#" class="action-btn" onclick="showUpdatePassword()">Update Password</a>
-                    <a href="#" class="action-btn" onclick="contactFaculty()">Contact Faculty</a>
-                </div>
-            </div>
-
-            <!-- Upcoming Classes -->
-            <div class="card">
-                <h3>Upcoming Classes</h3>
-                <div class="upcoming-classes">
-                    <!-- Add dynamic upcoming classes here -->
-                    <p>Loading schedule...</p>
-                </div>
-            </div>
-
-            <!-- Attendance Calendar -->
-            <div class="card">
-                <h3>This Month's Attendance</h3>
-                <div class="calendar">
-                    <!-- Will be populated by JavaScript -->
-
-<div class="dashboard-container">
-    <div class="dashboard-header">
-        <h1><i class="bi bi-mortarboard-fill"></i> Student Dashboard</h1>
-        <div class="student-info">
-            <div class="info-card">
-                <i class="bi bi-person-badge"></i>
-                <div class="info-details">
-                    <span class="info-label">Name</span>
-                    <span class="info-value">{{ student.name }}</span>
-                </div>
-            </div>
-            <div class="info-card">
-                <i class="bi bi-card-heading"></i>
-                <div class="info-details">
-                    <span class="info-label">Roll Number</span>
-                    <span class="info-value">{{ student.roll_number }}</span>
-                </div>
-            </div>
-            <div class="info-card">
-                <i class="bi bi-book"></i>
-                <div class="info-details">
-                    <span class="info-label">Course</span>
-                    <span class="info-value">{{ student.course }}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="dashboard-grid">
-        <!-- Attendance Overview Card -->
-        <div class="dashboard-card overview-card">
-            <div class="card-header">
-                <h3><i class="bi bi-graph-up"></i> Attendance Overview</h3>
-            </div>
-            <div class="card-body">
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <div class="stat-icon">
-                            <i class="bi bi-calendar-check"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h4>Overall Attendance</h4>
-                            <div class="stat-value">85%</div>
-                            <div class="stat-trend positive">
-                                <i class="bi bi-arrow-up"></i> 5% this month
+            <!-- Course Overview -->
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4">
+                {% for course in courses %}
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ attendance_stats[course.id].name }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ attendance_stats[course.id].code }}</h6>
+                            
+                            <div class="attendance-progress mt-3">
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar {% if attendance_stats[course.id].percentage >= 75 %}bg-success{% elif attendance_stats[course.id].percentage >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                         role="progressbar"
+                                         style="width: {{ attendance_stats[course.id].percentage }}%"
+                                         aria-valuenow="{{ attendance_stats[course.id].percentage }}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small>Attendance: {{ attendance_stats[course.id].percentage }}%</small>
+                                    <small>Present: {{ attendance_stats[course.id].present }}/{{ attendance_stats[course.id].total }}</small>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="stat-box">
-                        <div class="stat-icon">
-                            <i class="bi bi-clock-history"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h4>Classes Attended</h4>
-                            <div class="stat-value">42/48</div>
-                            <div class="stat-trend">Last 30 days</div>
-                        </div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-icon">
-                            <i class="bi bi-exclamation-triangle"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h4>Classes Missed</h4>
-                            <div class="stat-value">6</div>
-                            <div class="stat-trend negative">Action needed</div>
-                        </div>
-                    </div>
                 </div>
-                <div class="attendance-chart">
-                    <canvas id="attendanceChart"></canvas>
-                </div>
+                {% endfor %}
             </div>
-        </div>
-
-        <!-- Recent Attendance Card -->
-        <div class="dashboard-card">
-            <div class="card-header">
-                <h3><i class="bi bi-calendar-week"></i> Recent Attendance</h3>
-                <div class="card-actions">
-                    <button class="btn btn-sm btn-primary" onclick="downloadAttendance()">
-                        <i class="bi bi-download"></i> Download Report
-                    </button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="attendance-table">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Course</th>
-                                <th>Status</th>
-                                <th>Marked By</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for record in attendance_records %}
-                            <tr>
-                                <td>{{ record.date }}</td>
-                                <td>{{ record.course }}</td>
-                                <td>
-                                    <span class="status-badge {{ record.status.lower() }}">
-                                        {{ record.status }}
-                                    </span>
-                                </td>
-                                <td>{{ record.faculty_name }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions Card -->
-        <div class="dashboard-card">
-            <div class="card-header">
-                <h3><i class="bi bi-lightning"></i> Quick Actions</h3>
-            </div>
-            <div class="card-body">
-                <div class="quick-actions">
-                    <a href="#" class="action-button" onclick="viewAttendanceDetails()">
-                        <i class="bi bi-calendar-range"></i>
-                        <span>View Full Attendance</span>
-                    </a>
-                    <a href="#" class="action-button" onclick="requestLeave()">
-                        <i class="bi bi-calendar-x"></i>
-                        <span>Request Leave</span>
-                    </a>
-                    <a href="#" class="action-button" onclick="viewSchedule()">
-                        <i class="bi bi-calendar4-week"></i>
-                        <span>Class Schedule</span>
-                    </a>
-                    <a href="#" class="action-button" onclick="contactFaculty()">
-                        <i class="bi bi-chat-dots"></i>
-                        <span>Contact Faculty</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="tab-content" id="attendance-history">
-        <div class="card">
-            <h3>Attendance History</h3>
-            <table class="attendance-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Course</th>
-                        <th>Status</th>
-                        <th>Marked By</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record, course in attendance_records %}
-                    <tr>
-                        <td>{{ record.date.strftime('%Y-%m-%d') }}</td>
-                        <td>{{ course.name }}</td>
-                        <td class="{{ record.status }}">{{ record.status|title }}</td>
-                        <td>{{ record.marked_by }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="tab-content" id="profile">
-        <div class="card">
-            <h3>Student Profile</h3>
-            <div class="profile-info">
-                <p><strong>Name:</strong> {{ student.name }}</p>
-                <p><strong>Roll Number:</strong> {{ student.roll_number }}</p>
-                <p><strong>Course:</strong> {{ student.course }}</p>
-            </div>
-            <div class="password-update">
-                <h4>Update Password</h4>
-                <form id="password-form" onsubmit="updatePassword(event)">
-                    <input type="password" id="new-password" placeholder="New Password" required>
-                    <button type="submit">Update Password</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="tab-content" id="timetable">
-        <div class="card">
-            <h3>Weekly Timetable</h3>
-            <div class="timetable-grid">
-                <!-- Will be populated by JavaScript -->
-            </div>
-        </div>
-    </div>
-
-    <div class="tab-content" id="notifications">
-        <div class="card">
-            <h3>Notifications</h3>
-            <div class="notifications-list">
-                <!-- Will be populated by JavaScript -->
-            </div>
-        </div>
+        </main>
     </div>
 </div>
-
+{% endblock %}
 
 {% block styles %}
 <style>
-    .welcome-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        backdrop-filter: blur(10px);
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    padding: 48px 0 0;
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+}
+
+.nav-link {
+    color: #333;
+    padding: .5rem 1rem;
+}
+
+.nav-link.active {
+    color: #007bff;
+    background-color: rgba(0, 123, 255, .1);
+}
+
+.nav-link:hover {
+    color: #007bff;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.progress {
+    background-color: #e9ecef;
+}
+
+main {
+    padding-top: 48px;
+}
+
+@media (max-width: 767.98px) {
+    .sidebar {
+        position: static;
+        padding-top: 0;
     }
-    .welcome-header h1 {
-        margin: 0;
-        font-size: 1.8rem;
-        color: #ffd700;
+    
+    main {
+        padding-top: 0;
     }
-    .student-info {
-        font-size: 1.1rem;
-        color: #ccc;
-    }
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        padding: 20px;
-    }
-    .card {
-        background: rgba(255, 255, 255, 0.1);
-        padding: 20px;
-        border-radius: 10px;
-        backdrop-filter: blur(10px);
-    }
-    .stats-card {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    .stats-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }
-    .stat-item {
-        background: rgba(255, 255, 255, 0.05);
-        padding: 15px;
-        border-radius: 8px;
-        text-align: center;
-    }
-    .stat-item span {
-        font-size: 0.9em;
-        color: #ccc;
-    }
-    .stat-item h2 {
-        margin: 10px 0 0 0;
-        color: #ffd700;
-    }
-    .progress-bar {
-        width: 100%;
-        height: 10px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
-        overflow: hidden;
-    }
-    .progress {
-        height: 100%;
-        background: #ffd700;
-        transition: width 0.5s ease;
-    }
-    .attendance-info {
-        display: flex;
-        justify-content: space-between;
-        color: #ccc;
-        font-size: 0.9em;
-    }
-    .grade {
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-weight: bold;
-    }
-    .grade-A { background: #4CAF50; }
-    .grade-B { background: #2196F3; }
-    .grade-C { background: #FFC107; }
-    .grade-D { background: #F44336; }
-    .quick-actions {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-    .action-btn {
-        padding: 10px 15px;
-        border-radius: 5px;
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-        text-decoration: none;
-        transition: all 0.3s ease;
-    }
-    .action-btn:hover {
-        background: rgba(255, 255, 255, 0.2);
-    }
-    .calendar {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        gap: 5px;
-        margin-top: 15px;
-    }
-    .calendar-day {
-        aspect-ratio: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
-        font-size: 0.8em;
-    }
-    .present { background: rgba(76, 175, 80, 0.3); }
-    .absent { background: rgba(244, 67, 54, 0.3); }
-    .attendance-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 15px;
-    }
-    .attendance-table th,
-    .attendance-table td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .attendance-table th {
-        background: rgba(255, 255, 255, 0.05);
-        font-weight: 600;
-    }
-    .attendance-table tr:hover {
-        background: rgba(255, 255, 255, 0.05);
-    }
-    .tabs {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding-bottom: 10px;
-    }
-    .tab {
-        padding: 8px 16px;
-        border: none;
-        background: none;
-        color: #ccc;
-        cursor: pointer;
-        border-radius: 4px;
-        transition: all 0.3s ease;
-    }
-    .tab:hover {
-        background: rgba(255, 255, 255, 0.1);
-    }
-    .tab.active {
-        background: #ffd700;
-        color: #000;
-    }
-    .tab-content {
-        display: none;
-    }
-    .tab-content.active {
-        display: block;
-    }
-    .profile-info {
-        margin-bottom: 20px;
-    }
-    .profile-info p {
-        margin: 10px 0;
-    }
-    .password-update {
-        padding-top: 20px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .password-update input {
-        width: 100%;
-        padding: 8px;
-        margin: 10px 0;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 4px;
-        color: white;
-    }
-    .password-update button {
-        padding: 8px 16px;
-        background: #ffd700;
-        border: none;
-        border-radius: 4px;
-        color: #000;
-        cursor: pointer;
-    }
-    .password-update button:hover {
-        background: #ffed4a;
-    }
+}
 </style>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            tab.classList.add('active');
-            document.getElementById(tab.dataset.tab).classList.add('active');
-        });
-    });
-
-    // Password update
-    async function updatePassword(event) {
-        event.preventDefault();
-        const password = document.getElementById('new-password').value;
-        try {
-            const response = await fetch('/student/update-password', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: `new_password=${encodeURIComponent(password)}`
-            });
-            const result = await response.json();
-            alert(result.message || result.error);
-            if (response.ok) {
-                document.getElementById('password-form').reset();
-            }
-        } catch (error) {
-            alert('Error updating password');
-        }
-    }
-
-    // Theme toggle
-    document.querySelector('.theme-toggle').addEventListener('click', function() {
-        document.body.classList.toggle('dark-mode');
-        this.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
-    });
-
-    // Populate calendar
-    function populateCalendar() {
-        const calendar = document.querySelector('.calendar');
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        
-        // Add day headers
-        days.forEach(day => {
-            const dayEl = document.createElement('div');
-            dayEl.className = 'calendar-day';
-            dayEl.textContent = day;
-            calendar.appendChild(dayEl);
-        });
-
-        // Add month days
-        const today = new Date();
-        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-        
-        for (let i = 1; i <= daysInMonth; i++) {
-            const dayEl = document.createElement('div');
-            dayEl.className = 'calendar-day';
-            dayEl.textContent = i;
-            
-            // Random attendance status for demo
-            if (i < today.getDate()) {
-                dayEl.classList.add(Math.random() > 0.2 ? 'present' : 'absent');
-            }
-            
-            calendar.appendChild(dayEl);
-        }
-    }
-
-    // Initialize
-    populateCalendar();
-
-    // Placeholder functions
-    function viewTimetable() {
-        document.querySelector('[data-tab="timetable"]').click();
-    }
-
-    function downloadReport() {
-        alert('Generating attendance report...');
-    }
-
-    function showUpdatePassword() {
-        document.querySelector('[data-tab="profile"]').click();
-        document.getElementById('new-password').focus();
-    }
-
-    function contactFaculty() {
-        alert('Opening faculty contact list...');
-    }
-</script>
-{% endblock %}
-
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize attendance chart
-    const ctx = document.getElementById('attendanceChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-            datasets: [{
-                label: 'Attendance %',
-                data: [80, 85, 82, 88],
-                borderColor: '#4e73df',
-                backgroundColor: 'rgba(78, 115, 223, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
-});
-
-function downloadAttendance() {
-    // Add download functionality
-    alert('Downloading attendance report...');
-}
-
-function viewAttendanceDetails() {
-    window.location.href = '/student/attendance';
-}
-
-function requestLeave() {
-    window.location.href = '/student/leave-request';
-}
-
-function viewSchedule() {
-    window.location.href = '/student/schedule';
-}
-
-function contactFaculty() {
-    window.location.href = '/student/contact-faculty';
-}
-</script>
-
 {% endblock %}

@@ -366,54 +366,37 @@ def student_dashboard():
     # Get student details
     student = Student.query.filter_by(user_id=current_user.id).first()
     
-    # Get attendance records
-    attendance_records = db.session.query(
-        Attendance, Course
-    ).join(
-        Course, Course.id == Attendance.course_id
-    ).filter(
-        Attendance.student_id == student.id
-    ).order_by(
-        Attendance.date.desc()
-    ).all()
+    if not student:
+        flash('Student profile not found. Please contact administrator.', 'error')
+        return redirect(url_for('login'))
     
-    # Calculate attendance statistics
+    # Get courses and attendance records
+    courses = Course.query.all()
     attendance_stats = {}
-    for record, course in attendance_records:
-        if course.name not in attendance_stats:
-            attendance_stats[course.name] = {
-                'total': 0,
-                'present': 0,
-                'absent': 0
-            }
-        
-        attendance_stats[course.name]['total'] += 1
-        if record.status == 'present':
-            attendance_stats[course.name]['present'] += 1
-        else:
-            attendance_stats[course.name]['absent'] += 1
     
-    # Calculate percentages
-    for course in attendance_stats:
-        total = attendance_stats[course]['total']
-        if total > 0:
-            percentage = (attendance_stats[course]['present'] / total) * 100
-            attendance_stats[course]['percentage'] = round(percentage, 2)
-            # Add grade based on percentage
-            if percentage >= 80:
-                attendance_stats[course]['grade'] = 'A'
-            elif percentage >= 70:
-                attendance_stats[course]['grade'] = 'B'
-            elif percentage >= 60:
-                attendance_stats[course]['grade'] = 'C'
-            else:
-                attendance_stats[course]['grade'] = 'D'
+    for course in courses:
+        attendance_records = Attendance.query.filter_by(
+            student_id=student.id,
+            course_id=course.id
+        ).all()
+        
+        total = len(attendance_records)
+        present = sum(1 for record in attendance_records if record.status == 'present')
+        
+        attendance_stats[course.id] = {
+            'total': total,
+            'present': present,
+            'absent': total - present,
+            'percentage': round((present / total * 100) if total > 0 else 0, 2),
+            'name': course.name,
+            'code': course.code
+        }
     
     return render_template(
         'student/dashboard.html',
         student=student,
         attendance_stats=attendance_stats,
-        attendance_records=attendance_records
+        courses=courses
     )
 
 @app.route('/student/update-password', methods=['POST'])
